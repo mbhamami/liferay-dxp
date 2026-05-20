@@ -1,0 +1,5 @@
+liferay/deploy/*
+!liferay/deploy/.gitkeep
+liferay/files/*
+!liferay/files/.gitkeep
+*.log

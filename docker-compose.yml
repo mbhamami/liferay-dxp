@@ -1,0 +1,117 @@
+services:
+  # ----------------------------------------------------------------------------
+  # Base de données PostgreSQL pour Liferay DXP
+  # ----------------------------------------------------------------------------
+  liferay-db:
+    image: postgres:16
+    container_name: liferay-db
+    environment:
+      POSTGRES_DB: lportal
+      POSTGRES_USER: liferay
+      POSTGRES_PASSWORD: liferay
+    volumes:
+      - liferay-db-data:/var/lib/postgresql/data
+    networks:
+      - liferay-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U liferay -d lportal"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ----------------------------------------------------------------------------
+  # Base de données PostgreSQL pour Keycloak
+  # ----------------------------------------------------------------------------
+  keycloak-db:
+    image: postgres:16
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    networks:
+      - liferay-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ----------------------------------------------------------------------------
+  # Keycloak (mode développement)
+  # Console admin : http://localhost:8180  (admin / admin)
+  # ----------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8180:8080"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - liferay-net
+
+  # ----------------------------------------------------------------------------
+  # Liferay DXP 2026.Q1
+  # Portail : http://localhost:8080
+  # ----------------------------------------------------------------------------
+  liferay:
+    image: liferay/dxp:2026.q1.0
+    container_name: liferay
+    ports:
+      - "8080:8080"   # HTTP du portail
+      - "11311:11311" # Console Gogo (OSGi)
+      - "8000:8000"   # Debug JPDA (optionnel)
+    environment:
+      # --- Connexion JDBC vers PostgreSQL ---------------------------------
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_DRIVER_UPPERCASEC_LASS_UPPERCASEN_AME: org.postgresql.Driver
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_URL: jdbc:postgresql://liferay-db:5432/lportal
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_USERNAME: liferay
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_PASSWORD: liferay
+
+      # --- Désactivation du setup wizard ---------------------------------
+      LIFERAY_SETUP_PERIOD_WIZARD_PERIOD_ENABLED: "false"
+
+      # --- Compte administrateur par défaut ------------------------------
+      LIFERAY_ADMIN_PERIOD_EMAIL_PERIOD_FROM_PERIOD_ADDRESS: admin@liferay.com
+      LIFERAY_ADMIN_PERIOD_EMAIL_PERIOD_FROM_PERIOD_NAME: Liferay Admin
+
+      # --- Locale / fuseau horaire ---------------------------------------
+      LIFERAY_USERS_PERIOD_REMINDER_PERIOD_QUERIES_PERIOD_ENABLED: "false"
+      LIFERAY_COMPANY_PERIOD_DEFAULT_PERIOD_LOCALE: fr_FR
+      LIFERAY_COMPANY_PERIOD_DEFAULT_PERIOD_TIME_PERIOD_ZONE: Europe/Paris
+    volumes:
+      - liferay-data:/opt/liferay/data
+      - ./liferay/deploy:/opt/liferay/deploy
+      - ./liferay/files:/mnt/liferay/files
+    depends_on:
+      liferay-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - liferay-net
+
+volumes:
+  liferay-db-data:
+  keycloak-db-data:
+  liferay-data:
+
+networks:
+  liferay-net:
+    driver: bridge
