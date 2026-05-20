@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+    id 'biz.aQute.bnd.builder' version '6.4.0'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Toutes les APIs Liferay 7.4 sont apportées par release.portal.api.
+    compileOnly 'com.liferay.portal:release.portal.api:7.4.3.132-ga132'
+    compileOnly 'org.osgi:osgi.cmpn:7.0.0'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+jar {
+    archiveBaseName = 'com.example.keycloak.group.mapper'
+}

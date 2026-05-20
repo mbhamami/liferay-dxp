@@ -1,0 +1,122 @@
+{
+  "realm": "liferay",
+  "enabled": true,
+  "displayName": "Liferay",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "liferay",
+      "name": "Liferay DXP",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "liferay-secret-change-me",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "http://localhost:18080",
+      "baseUrl": "http://localhost:18080",
+      "redirectUris": [
+        "http://localhost:18080/*"
+      ],
+      "webOrigins": [
+        "http://localhost:18080"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:18080/*",
+        "pkce.code.challenge.method": ""
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "editors",
+      "path": "/editors"
+    },
+    {
+      "name": "viewers",
+      "path": "/viewers"
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "email": "alice@example.com",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Liddell",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Passw0rd!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-liferay"
+      ],
+      "groups": [
+        "/editors"
+      ]
+    },
+    {
+      "username": "bob",
+      "email": "bob@example.com",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Marley",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Passw0rd!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-liferay"
+      ],
+      "groups": [
+        "/viewers"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+Bundle-Name: Keycloak Group Mapper
+Bundle-SymbolicName: com.example.keycloak.group.mapper
+Bundle-Version: 1.0.0
+-sources: true
+-jpms-multi-release: 11

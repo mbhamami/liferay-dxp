@@ -3,3 +3,10 @@ liferay/deploy/*
 liferay/files/*
 !liferay/files/.gitkeep
 *.log
+
+# Local Claude Code config
+.claude/
+
+# Gradle build artifacts (module OSGi)
+modules/**/build/
+modules/**/.gradle/
