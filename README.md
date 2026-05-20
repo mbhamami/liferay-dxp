@@ -276,9 +276,18 @@ userInfoMapperJSON="{\"emailAddress\":\"email\",\"firstName\":\"given_name\",\"l
 ## Mapping des groupes Keycloak → User Groups Liferay
 
 Module OSGi : [`modules/keycloak-group-mapper`](modules/keycloak-group-mapper).
-Implémente `OIDCUserInfoProcessor` : à chaque login, lit la claim `groups` du
-UserInfo, crée les User Groups manquants côté Liferay et les assigne à
-l'utilisateur (les groupes absents de la claim sont retirés — synchronisation).
+Implémente un `LifecycleAction` sur l'événement `login.events.post` : à chaque
+login OIDC, lit l'`OpenIdConnectSession` de la HTTP session, décode la claim
+`groups` du JWT access token, crée les User Groups manquants côté Liferay et
+les assigne à l'utilisateur (les groupes absents de la claim sont retirés —
+synchronisation).
+
+> 💡 **Pourquoi un `LifecycleAction` et pas `OIDCUserInfoProcessor` ?** Dans
+> Liferay 7.4 CE/DXP, `OIDCUserInfoProcessor` est une classe **interne**
+> (`com.liferay.portal.security.sso.openid.connect.internal.*`), pas un point
+> d'extension public. L'API publique ne propose pas de hook *userinfo*. La voie
+> stable et supportée est donc un `LifecycleAction` post-login qui exploite
+> `OpenIdConnectSession` (interface publique).
 
 ### 1. Exposer la claim `groups` côté Keycloak
 
@@ -416,13 +425,19 @@ Aucun JDK requis sur ton poste : le build passe par un container Gradle.
 ```
 
 Le script :
-1. Lance `gradle:8.5-jdk11` en container pour compiler et packager.
-2. Copie le jar produit (`com.example.keycloak.group.mapper-1.0.0.jar`) dans `liferay/deploy/`.
+1. Lance `gradle:8.5-jdk17` en container pour compiler et packager.
+2. Copie le jar produit (`com.example.keycloak.group.mapper-1.0.0.jar`)
+   **directement dans le container Liferay** via `docker cp` vers
+   `/opt/liferay/osgi/modules/`.
 
-### 3. Déploiement à chaud
+> ⚠️ **Pourquoi pas via le volume `./liferay/deploy` ?** Sur les bind-mounts
+> Windows/WSL, l'autodeploy de Liferay échoue à supprimer le jar après lecture
+> et boucle indéfiniment avec « *Unable to write … .jar* ». `docker cp` évite
+> le problème en posant directement le bundle dans le dossier de modules OSGi.
 
-Liferay surveille `/opt/liferay/deploy` et installe le bundle automatiquement
-(5 à 10 secondes). Suivi :
+### 3. Vérifier l'installation
+
+Liferay charge le bundle dans les 5-10 s :
 
 ```powershell
 docker compose logs -f liferay | Select-String "keycloak\.group\.mapper"
@@ -435,8 +450,8 @@ STARTED com.example.keycloak.group.mapper_1.0.0
 
 ### 4. Tester
 
-1. Déconnecte-toi de Liferay.
-2. Reconnecte-toi via Keycloak.
+1. Déconnecte-toi de Liferay (ou ouvre une fenêtre privée).
+2. Reconnecte-toi via Keycloak en tant qu'`alice` / `Passw0rd!`.
 3. Dans les logs Liferay :
    ```
    Created Liferay UserGroup 'editors' from Keycloak claim
@@ -449,13 +464,31 @@ STARTED com.example.keycloak.group.mapper_1.0.0
 
 | Pour…                                          | Modifier                                                                                                  |
 |------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| Utiliser un autre nom de claim                  | Constante `_CLAIM_NAME` dans `GroupMappingOIDCUserInfoProcessor.java`.                                    |
+| Utiliser un autre nom de claim                  | Constante du nom (`"groups"`) dans `KeycloakGroupSyncPostLoginAction.java`.                               |
 | Ne pas supprimer les groupes manuels            | Remplacer `setUserUserGroups` par `addUserUserGroups` (n'enlève rien, ajoute seulement).                  |
-| Préfixer les groupes Keycloak (`kc_editors`)    | Modifier la ligne `name = ...` pour ajouter un préfixe.                                                   |
-| Mapper aussi des rôles Liferay                  | Ajouter un appel à `RoleLocalService` dans la même classe (claim séparée `realm_access.roles`).           |
+| Préfixer les groupes Keycloak (`kc_editors`)    | Modifier la boucle qui construit `name` pour ajouter un préfixe.                                          |
+| Mapper aussi des rôles Liferay                  | Ajouter un appel à `RoleLocalService` (claim séparée `realm_access.roles` côté Keycloak).                 |
 
-> Après chaque modification : `build.ps1` / `build.sh` régénère le jar — Liferay
-> redéploie à chaud sans redémarrage.
+> Après chaque modification : relance `build.ps1` / `build.sh`. Liferay
+> redémarre le bundle à chaud (pas de restart du container).
+
+### 6. Dépendances et versions
+
+Le `build.gradle` cible précisément Liferay 7.4.3.132 :
+
+| Artefact                                                            | Version    |
+|---------------------------------------------------------------------|------------|
+| `com.liferay.portal:release.portal.api`                             | `7.4.3.132`|
+| `com.liferay:com.liferay.portal.security.sso.openid.connect.api`    | `12.0.0`   |
+| JDK de compilation                                                  | 17         |
+
+Les deux artefacts Liferay viennent du Nexus public :
+`https://repository.liferay.com/nexus/content/groups/public`.
+
+> ⚠️ Si tu passes à une autre version de Liferay, vérifie la version du bundle
+> `com.liferay.portal.security.sso.openid.connect.api` réellement présente
+> dans le container et aligne `build.gradle` dessus, sinon le résolveur OSGi
+> rejette le bundle (`Unresolved requirement: Import-Package`).
 
 ---
 

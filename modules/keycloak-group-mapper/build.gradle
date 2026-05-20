@@ -8,17 +8,33 @@ version = '1.0.0'
 
 repositories {
     mavenCentral()
+    // Nexus public de Liferay : héberge release.portal.api et tous les bundles
+    // (com.liferay.portal.security.sso.openid.connect.api, etc.).
+    maven { url 'https://repository.liferay.com/nexus/content/groups/public' }
 }
 
 dependencies {
-    // Toutes les APIs Liferay 7.4 sont apportées par release.portal.api.
-    compileOnly 'com.liferay.portal:release.portal.api:7.4.3.132-ga132'
+    // release.portal.api : POM "umbrella" exposant les APIs cœur (kernel, model,
+    // service, log, exception). Note : ne contient PAS les bundles SSO/OIDC.
+    compileOnly 'com.liferay.portal:release.portal.api:7.4.3.132'
+
+    // API OpenID Connect (OpenIdConnectSession, OpenIdConnectWebKeys).
+    // Version 12.0.0 = celle embarquée par Liferay 7.4.3.132 (exporte le
+    // package com.liferay.portal.security.sso.openid.connect en v7.0.0).
+    compileOnly 'com.liferay:com.liferay.portal.security.sso.openid.connect.api:12.0.0'
+
+    // API Servlet (HttpServletRequest, HttpSession) — fournie par OSGi runtime.
+    compileOnly 'javax.servlet:javax.servlet-api:3.1.0'
+
+    // Annotations OSGi (@Component, @Reference).
     compileOnly 'org.osgi:osgi.cmpn:7.0.0'
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    // Liferay 7.4.3.132 est compilé en Java 17 — il faut au moins JDK 17
+    // pour lire ses class files (version 61).
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 jar {
