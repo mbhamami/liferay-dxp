@@ -1,0 +1,3 @@
+# Ne jamais committer de clé d'activation / licence Liferay
+*.li
+deploy/*.li

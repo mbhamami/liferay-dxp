@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'biz.aQute.bnd.builder' version '6.4.0'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // APIs Liferay compilées contre les jars RÉELS du runtime (copiés depuis le
+    // container Liferay vers ./libs par build.ps1 / build.sh). Cela garantit que
+    // bnd calcule des plages d'Import-Package correspondant EXACTEMENT à la
+    // version déployée — indispensable sur 2025.q3.0 où le package OpenID
+    // Connect est en v8.0 (et non plus v7.0) et où Liferay est passé à Jakarta.
+    //   - portal-kernel.jar : kernel.events, kernel.json, kernel.log
+    //   - oidc-connect-api.jar : OpenIdConnectSession, OpenIdConnectWebKeys
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+
+    // jakarta.servlet 6.0 (HttpServletRequest, HttpSession). Liferay 2025.q3 a
+    // migré de javax.servlet vers Jakarta EE : LifecycleEvent.getRequest()
+    // renvoie désormais un jakarta.servlet.http.HttpServletRequest.
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+
+    // Annotations OSGi Declarative Services (@Component) — build-time uniquement
+    // (rétention CLASS, transformées en XML OSGI-INF par bnd).
+    compileOnly 'org.osgi:osgi.cmpn:7.0.0'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jar {
+    archiveBaseName = 'com.example.oidc.claims.logger'
+}

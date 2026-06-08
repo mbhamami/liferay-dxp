@@ -1,0 +1,7 @@
+# Sorties de build
+/build/
+.gradle/
+
+# APIs Liferay copiées depuis le container au moment du build (cf. build.ps1 /
+# build.sh) — ce sont des artefacts de runtime, pas du code source à versionner.
+/libs/

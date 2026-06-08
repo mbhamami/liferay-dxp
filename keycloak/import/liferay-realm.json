@@ -27,13 +27,15 @@
       "rootUrl": "http://localhost:18080",
       "baseUrl": "http://localhost:18080",
       "redirectUris": [
-        "http://localhost:18080/*"
+        "http://localhost:18080/*",
+        "http://localhost:28080/*"
       ],
       "webOrigins": [
-        "http://localhost:18080"
+        "http://localhost:18080",
+        "http://localhost:28080"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:18080/*",
+        "post.logout.redirect.uris": "http://localhost:18080/*##http://localhost:28080/*",
         "pkce.code.challenge.method": ""
       },
       "protocolMappers": [
@@ -48,6 +50,20 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true",
             "claim.name": "groups"
+          }
+        },
+        {
+          "name": "momo",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "momo",
+            "claim.name": "momo",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
           }
         }
       ],
@@ -83,6 +99,9 @@
       "firstName": "Alice",
       "lastName": "Liddell",
       "enabled": true,
+      "attributes": {
+        "momo": ["alice-momo"]
+      },
       "credentials": [
         {
           "type": "password",
@@ -104,6 +123,9 @@
       "firstName": "Bob",
       "lastName": "Marley",
       "enabled": true,
+      "attributes": {
+        "momo": ["bob-momo"]
+      },
       "credentials": [
         {
           "type": "password",
@@ -118,5 +140,17 @@
         "/viewers"
       ]
     }
-  ]
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"momo\",\"displayName\":\"Momo\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+          ]
+        }
+      }
+    ]
+  }
 }

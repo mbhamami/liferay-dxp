@@ -1,0 +1,4 @@
+Bundle-Name: OIDC Claims Logger
+Bundle-SymbolicName: com.example.oidc.claims.logger
+Bundle-Version: 1.0.0
+-sources: true

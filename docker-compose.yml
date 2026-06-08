@@ -81,7 +81,7 @@ services:
   # Portail : http://localhost:18080
   # ----------------------------------------------------------------------------
   liferay:
-    image: liferay/portal:7.4.3.132-ga132
+    image: liferay/dxp:2025.q3.0
     container_name: liferay
     ports:
       - "18080:8080"  # HTTP du portail (host 18080 -> container 8080)
@@ -96,6 +96,12 @@ services:
 
       # --- Désactivation du setup wizard ---------------------------------
       LIFERAY_SETUP_PERIOD_WIZARD_PERIOD_ENABLED: "false"
+
+      # --- Migration automatique du schéma de base ----------------------
+      # Indispensable lors d'une montée de version (ex. Q1 -> Q3) : Liferay
+      # exécute l'upgrade du schéma au démarrage au lieu de s'arrêter avec
+      # « You must first upgrade the portal to the required schema version ».
+      LIFERAY_UPGRADE_PERIOD_DATABASE_PERIOD_AUTO_PERIOD_RUN: "true"
 
       # --- Compte administrateur par défaut ------------------------------
       LIFERAY_ADMIN_PERIOD_EMAIL_PERIOD_FROM_PERIOD_ADDRESS: admin@liferay.com
@@ -120,10 +126,80 @@ services:
     networks:
       - liferay-net
 
+  # ----------------------------------------------------------------------------
+  # Base de données PostgreSQL pour la 2e instance Liferay (DXP 2026)
+  # Base dédiée (lportal2) : deux instances Liferay ne partagent jamais la
+  # même base de données.
+  # ----------------------------------------------------------------------------
+  liferay2-db:
+    image: postgres:16
+    container_name: liferay2-db
+    environment:
+      POSTGRES_DB: lportal2
+      POSTGRES_USER: liferay
+      POSTGRES_PASSWORD: liferay
+    volumes:
+      - liferay2-db-data:/var/lib/postgresql/data
+    networks:
+      - liferay-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U liferay -d lportal2"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ----------------------------------------------------------------------------
+  # 2e instance Liferay DXP 2026.q1.0 (LTS)
+  # Portail : http://localhost:28080 — connectée au MÊME Keycloak que liferay.
+  # ----------------------------------------------------------------------------
+  liferay2:
+    image: liferay/dxp:2026.q1.0-lts
+    container_name: liferay2
+    ports:
+      - "28080:8080"   # HTTP du portail (host 28080 -> container 8080)
+      - "21311:11311"  # Console Gogo (OSGi)
+      - "8001:8000"    # Debug JPDA (optionnel)
+    environment:
+      # --- Connexion JDBC vers SA PROPRE base PostgreSQL -----------------
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_DRIVER_UPPERCASEC_LASS_UPPERCASEN_AME: org.postgresql.Driver
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_URL: jdbc:postgresql://liferay2-db:5432/lportal2
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_USERNAME: liferay
+      LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_PASSWORD: liferay
+
+      # --- Désactivation du setup wizard ---------------------------------
+      LIFERAY_SETUP_PERIOD_WIZARD_PERIOD_ENABLED: "false"
+
+      # --- Migration automatique du schéma de base ----------------------
+      LIFERAY_UPGRADE_PERIOD_DATABASE_PERIOD_AUTO_PERIOD_RUN: "true"
+
+      # --- Compte administrateur par défaut ------------------------------
+      LIFERAY_ADMIN_PERIOD_EMAIL_PERIOD_FROM_PERIOD_ADDRESS: admin@liferay.com
+      LIFERAY_ADMIN_PERIOD_EMAIL_PERIOD_FROM_PERIOD_NAME: Liferay Admin
+
+      # --- Locale / fuseau horaire ---------------------------------------
+      LIFERAY_USERS_PERIOD_REMINDER_PERIOD_QUERIES_PERIOD_ENABLED: "false"
+      LIFERAY_COMPANY_PERIOD_DEFAULT_PERIOD_LOCALE: fr_FR
+      LIFERAY_COMPANY_PERIOD_DEFAULT_PERIOD_TIME_PERIOD_ZONE: Europe/Paris
+    volumes:
+      - liferay2-data:/opt/liferay/data
+      - ./liferay2/deploy:/opt/liferay/deploy
+      # Mêmes configs OSGi OIDC (copie dédiée) : active OpenID Connect et
+      # déclare le MÊME fournisseur Keycloak (discovery via http://keycloak:8080).
+      - ./liferay2/osgi/configs:/opt/liferay/osgi/configs
+    depends_on:
+      liferay2-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - liferay-net
+
 volumes:
   liferay-db-data:
   keycloak-db-data:
   liferay-data:
+  liferay2-db-data:
+  liferay2-data:
 
 networks:
   liferay-net:
